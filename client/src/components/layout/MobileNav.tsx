@@ -7,9 +7,13 @@ import {
   BellIcon, 
   BanknoteIcon, 
   CalendarIcon,
-  X
+  X,
+  HelpCircleIcon,
+  LogOutIcon
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { IntroductionDialog } from "@/components/layout/IntroductionDialog";
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -26,25 +30,41 @@ interface NavItemProps {
 
 const NavItem = ({ href, icon, children, isActive, onClick }: NavItemProps) => {
   return (
-    <Link href={href}>
-      <a 
-        className={cn(
-          "flex items-center px-4 py-3 text-sm font-medium rounded-md", 
-          isActive 
-            ? "text-white bg-primary" 
-            : "text-neutral-dark hover:text-primary hover:bg-gray-50"
-        )}
-        onClick={onClick}
-      >
-        <span className="w-5 h-5 mr-3">{icon}</span>
-        {children}
-      </a>
+    <Link 
+      href={href}
+      className={cn(
+        "flex items-center px-4 py-3 text-sm font-medium rounded-md", 
+        isActive 
+          ? "text-white bg-primary" 
+          : "text-neutral-dark hover:text-primary hover:bg-gray-50"
+      )}
+      onClick={onClick}
+    >
+      <span className="w-5 h-5 mr-3">{icon}</span>
+      {children}
     </Link>
   );
 };
 
 const MobileNav = ({ isOpen, onClose }: MobileNavProps) => {
   const [location] = useLocation();
+  const [openIntroDialog, setOpenIntroDialog] = useState(false);
+
+  // Auto-show intro dialog for first-time users
+  useEffect(() => {
+    // Read status from localStorage
+    const hasSeenIntro = localStorage.getItem('hasSeenIntro') === 'true';
+    
+    // If first time, show dialog after a delay
+    if (!hasSeenIntro) {
+      const timer = setTimeout(() => {
+        setOpenIntroDialog(true);
+        localStorage.setItem('hasSeenIntro', 'true');
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   return (
     <>
@@ -135,54 +155,73 @@ const MobileNav = ({ isOpen, onClose }: MobileNavProps) => {
                   <p className="text-xs text-gray-500">Admin</p>
                 </div>
               </div>
-              <button className="mt-4 w-full flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                Logout
-              </button>
+              <div className="mt-4 flex space-x-2">
+                <button 
+                  className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  onClick={() => {
+                    setOpenIntroDialog(true);
+                    onClose(); // Close the mobile menu when opening the tutorial
+                  }}
+                >
+                  <HelpCircleIcon className="w-4 h-4 mr-2" />
+                  Memulai
+                </button>
+                <button className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                  <LogOutIcon className="w-4 h-4 mr-2" />
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         </SheetContent>
       </Sheet>
       
+      <IntroductionDialog open={openIntroDialog} onOpenChange={setOpenIntroDialog} />
+      
       {/* Mobile Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 lg:hidden z-10">
-        <Link href="/">
-          <a className={cn(
+        <Link 
+          href="/"
+          className={cn(
             "flex flex-col items-center justify-center w-20 h-16",
             location === "/" ? "text-primary" : "text-neutral-dark hover:text-primary"
-          )}>
-            <HomeIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Dashboard</span>
-          </a>
+          )}
+        >
+          <HomeIcon className="w-6 h-6" />
+          <span className="text-xs mt-1">Dashboard</span>
         </Link>
         
-        <Link href="/devotional">
-          <a className={cn(
+        <Link 
+          href="/devotional"
+          className={cn(
             "flex flex-col items-center justify-center w-20 h-16",
             location === "/devotional" ? "text-primary" : "text-neutral-dark hover:text-primary"
-          )}>
-            <BookOpenIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Renungan</span>
-          </a>
+          )}
+        >
+          <BookOpenIcon className="w-6 h-6" />
+          <span className="text-xs mt-1">Renungan</span>
         </Link>
         
-        <Link href="/members">
-          <a className={cn(
+        <Link 
+          href="/members"
+          className={cn(
             "flex flex-col items-center justify-center w-20 h-16",
             location === "/members" ? "text-primary" : "text-neutral-dark hover:text-primary"
-          )}>
-            <UsersIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Jemaat</span>
-          </a>
+          )}
+        >
+          <UsersIcon className="w-6 h-6" />
+          <span className="text-xs mt-1">Jemaat</span>
         </Link>
         
-        <Link href="/calendar">
-          <a className={cn(
+        <Link 
+          href="/calendar"
+          className={cn(
             "flex flex-col items-center justify-center w-20 h-16",
             location === "/calendar" ? "text-primary" : "text-neutral-dark hover:text-primary"
-          )}>
-            <CalendarIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Agenda</span>
-          </a>
+          )}
+        >
+          <CalendarIcon className="w-6 h-6" />
+          <span className="text-xs mt-1">Agenda</span>
         </Link>
       </div>
     </>
