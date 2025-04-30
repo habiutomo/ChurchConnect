@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage } from "./storage";
 import { 
   insertDevotionalSchema, 
@@ -645,6 +646,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ error: "Failed to update equipment booking" });
       }
     }
+  });
+
+  // Invoice Route
+  app.get("/api/invoice", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "client", "public", "invoice.html"));
   });
 
   // Finance Routes
