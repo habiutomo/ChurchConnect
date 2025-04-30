@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DownloadIcon, FileTextIcon, UploadIcon, BanknoteIcon, ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+import { DownloadIcon, FileTextIcon, UploadIcon, BanknoteIcon, ArrowDownIcon, ArrowUpIcon, FileIcon } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { FinanceTransaction } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -81,6 +81,14 @@ const FinancePage = () => {
           <Button variant="outline" onClick={handleExportPDF}>
             <DownloadIcon className="mr-2 h-4 w-4" />
             Export PDF
+          </Button>
+          <Button 
+            variant="secondary" 
+            onClick={() => window.open('/api/invoice', '_blank')}
+            className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300"
+          >
+            <FileIcon className="mr-2 h-4 w-4" />
+            Lihat Penawaran
           </Button>
         </div>
       </div>
