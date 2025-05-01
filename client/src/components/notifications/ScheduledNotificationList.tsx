@@ -37,7 +37,7 @@ export function ScheduledNotificationList() {
     );
   }
 
-  if (!notifications || notifications.length === 0) {
+  if (!notifications || !Array.isArray(notifications) || notifications.length === 0) {
     return (
       <Card>
         <CardHeader>

@@ -21,7 +21,7 @@ export function AnniversaryCard({ member }: AnniversaryCardProps) {
 
   const anniversaryDate = new Date(member.anniversaryDate);
   const formattedDate = format(anniversaryDate, 'dd MMMM yyyy');
-  const years = differenceInYears(new Date(), anniversaryDate, { roundingMethod: 'floor' });
+  const years = differenceInYears(new Date(), anniversaryDate);
   
   const handleSendWishes = async () => {
     try {

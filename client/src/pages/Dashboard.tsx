@@ -4,6 +4,7 @@ import StatisticsSummary from "@/components/dashboard/StatisticsSummary";
 import DevotionalCard from "@/components/dashboard/DevotionalCard";
 import EventsCard from "@/components/dashboard/EventsCard";
 import BirthdayCard from "@/components/dashboard/BirthdayCard";
+import AnniversaryList from "@/components/dashboard/AnniversaryList";
 import FinancialSummaryCard from "@/components/dashboard/FinancialSummaryCard";
 import ActivityLogCard from "@/components/dashboard/ActivityLogCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,6 +47,10 @@ const Dashboard = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <BirthdayCard members={data.birthdayMembers} />
+        <AnniversaryList members={data.anniversaryMembers} />
+      </div>
+      
+      <div className="mb-8">
         <FinancialSummaryCard 
           income={data.finances.income}
           expenses={data.finances.expenses}
