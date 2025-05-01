@@ -180,6 +180,9 @@ export class MemStorage implements IStorage {
       category: "dewasa",
       baptismStatus: true,
       baptismDate: new Date("2005-03-15"),
+      maritalStatus: "Married",
+      anniversaryDate: new Date("2015-10-15"),
+      spouseName: "Budi Santoso",
       photo: "",
     });
 
@@ -194,6 +197,7 @@ export class MemStorage implements IStorage {
       category: "remaja",
       baptismStatus: false,
       baptismDate: undefined,
+      maritalStatus: "Single",
       photo: "",
     });
 
@@ -208,6 +212,9 @@ export class MemStorage implements IStorage {
       category: "dewasa",
       baptismStatus: true,
       baptismDate: new Date("1997-05-20"),
+      maritalStatus: "Married",
+      anniversaryDate: new Date("2010-05-28"),
+      spouseName: "Debora Wijaya",
       photo: "",
     });
 
@@ -313,6 +320,13 @@ export class MemStorage implements IStorage {
       name: "Ucapan Ulang Tahun",
       type: "birthday",
       content: "Selamat ulang tahun, {name}! Semoga Tuhan memberkati dan membimbing langkahmu di tahun yang baru ini. Tuhan kasih kamu!",
+      createdBy: 1,
+    });
+
+    await this.createNotificationTemplate({
+      name: "Ucapan Ulang Tahun Pernikahan",
+      type: "anniversary",
+      content: "Selamat ulang tahun pernikahan yang ke-{years} untuk {name} & {spouse}! Semoga kasih Kristus semakin nyata dalam pernikahan Anda. Tuhan memberkati!",
       createdBy: 1,
     });
 

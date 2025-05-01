@@ -1,10 +1,12 @@
 import { useState } from "react";
 import NotificationForm from "@/components/notifications/NotificationForm";
 import NotificationTemplates from "@/components/notifications/NotificationTemplates";
+import { ScheduledNotificationList } from "@/components/notifications/ScheduledNotificationList";
+import { ScheduleNotificationForm } from "@/components/notifications/ScheduleNotificationForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PhoneIcon, SendIcon, Settings2Icon } from "lucide-react";
+import { CalendarClock, ClockIcon, PhoneIcon, SendIcon, Settings2Icon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const NotificationsPage = () => {
@@ -23,6 +25,7 @@ const NotificationsPage = () => {
       <Tabs defaultValue="send" className="w-full">
         <TabsList>
           <TabsTrigger value="send">Kirim Notifikasi</TabsTrigger>
+          <TabsTrigger value="scheduled">Notifikasi Terjadwal</TabsTrigger>
           <TabsTrigger value="templates">Template Notifikasi</TabsTrigger>
         </TabsList>
         
@@ -38,6 +41,27 @@ const NotificationsPage = () => {
               <NotificationForm />
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="scheduled" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ScheduleNotificationForm />
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CalendarClock className="mr-2 h-5 w-5" />
+                  Notifikasi Terjadwal
+                </CardTitle>
+                <CardDescription>
+                  Daftar notifikasi yang telah dijadwalkan untuk dikirim nanti
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScheduledNotificationList />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
         <TabsContent value="templates">

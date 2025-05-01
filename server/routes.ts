@@ -648,6 +648,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Member Anniversary Routes
+  app.get("/api/members/anniversary", async (req, res) => {
+    try {
+      const month = req.query.month ? parseInt(req.query.month as string) : new Date().getMonth() + 1;
+      const day = req.query.day ? parseInt(req.query.day as string) : undefined;
+      
+      if (isNaN(month) || month < 1 || month > 12) {
+        return res.status(400).json({ error: "Invalid month. Must be between 1 and 12" });
+      }
+      
+      if (day !== undefined && (isNaN(day) || day < 1 || day > 31)) {
+        return res.status(400).json({ error: "Invalid day. Must be between 1 and 31" });
+      }
+      
+      const members = await storage.getAnniversaryMembers(month, day);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching anniversary members:", error);
+      res.status(500).json({ error: "Failed to fetch anniversary members" });
+    }
+  });
+
+  // Scheduled Notifications Routes
+  app.get("/api/notifications/scheduled", async (req, res) => {
+    try {
+      const notifications = await storage.getScheduledNotifications();
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching scheduled notifications:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled notifications" });
+    }
+  });
+
+  app.post("/api/notifications/schedule", async (req, res) => {
+    try {
+      const notificationSchema = z.object({
+        templateId: z.number(),
+        targetId: z.number().optional(),
+        targetType: z.string().optional(),
+        sentTo: z.string(),
+        scheduledFor: z.string().transform(val => new Date(val))
+      });
+
+      const data = notificationSchema.parse(req.body);
+      const notification = await storage.scheduleNotification(
+        {
+          templateId: data.templateId,
+          targetId: data.targetId,
+          targetType: data.targetType,
+          sentTo: data.sentTo,
+          status: "scheduled"
+        },
+        data.scheduledFor
+      );
+      
+      res.status(201).json(notification);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        console.error("Error scheduling notification:", error);
+        res.status(500).json({ error: "Failed to schedule notification" });
+      }
+    }
+  });
+
   // Invoice Route
   app.get("/api/invoice", (req, res) => {
     res.sendFile(path.join(process.cwd(), "client", "public", "invoice.html"));
