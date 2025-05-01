@@ -38,6 +38,7 @@ export interface IStorage {
   updateMember(id: number, member: Partial<InsertMember>): Promise<Member | undefined>;
   deleteMember(id: number): Promise<boolean>;
   getBirthdayMembers(month: number, day?: number): Promise<Member[]>;
+  getAnniversaryMembers(month: number, day?: number): Promise<Member[]>;
   
   // Attendance operations
   getAttendance(id: number): Promise<Attendance | undefined>;
@@ -96,7 +97,9 @@ export interface IStorage {
   // Sent notification operations
   getSentNotification(id: number): Promise<SentNotification | undefined>;
   getSentNotifications(): Promise<SentNotification[]>;
+  getScheduledNotifications(): Promise<SentNotification[]>;
   createSentNotification(notification: InsertSentNotification): Promise<SentNotification>;
+  scheduleNotification(notification: InsertSentNotification, scheduleDate: Date): Promise<SentNotification>;
 }
 
 // In-memory storage implementation
@@ -379,6 +382,14 @@ export class MemStorage implements IStorage {
     });
   }
 
+  async getAnniversaryMembers(month: number, day?: number): Promise<Member[]> {
+    return Array.from(this.members.values()).filter((member) => {
+      if (!member.anniversaryDate) return false;
+      const anniversaryDate = new Date(member.anniversaryDate);
+      return anniversaryDate.getMonth() + 1 === month && (day ? anniversaryDate.getDate() === day : true);
+    });
+  }
+
   // Attendance operations
   async getAttendance(id: number): Promise<Attendance | undefined> {
     return this.attendances.get(id);
@@ -622,9 +633,28 @@ export class MemStorage implements IStorage {
     return Array.from(this.sentNotifications.values());
   }
 
+  async getScheduledNotifications(): Promise<SentNotification[]> {
+    return Array.from(this.sentNotifications.values()).filter(
+      (notification) => notification.status === "scheduled" && notification.scheduledFor
+    );
+  }
+
   async createSentNotification(notification: InsertSentNotification): Promise<SentNotification> {
     const id = this.sentNotificationIdCounter++;
     const newNotification: SentNotification = { ...notification, id, sentAt: new Date() };
+    this.sentNotifications.set(id, newNotification);
+    return newNotification;
+  }
+
+  async scheduleNotification(notification: InsertSentNotification, scheduleDate: Date): Promise<SentNotification> {
+    const id = this.sentNotificationIdCounter++;
+    const newNotification: SentNotification = { 
+      ...notification, 
+      id, 
+      status: "scheduled",
+      scheduledFor: scheduleDate,
+      sentAt: new Date() 
+    };
     this.sentNotifications.set(id, newNotification);
     return newNotification;
   }

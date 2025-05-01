@@ -31,6 +31,9 @@ export const members = pgTable("members", {
   category: text("category").notNull(), // anak, remaja, dewasa, lansia
   baptismStatus: boolean("baptism_status").default(false),
   baptismDate: date("baptism_date"),
+  maritalStatus: text("marital_status"), // Single, Married, Widowed, Divorced
+  anniversaryDate: date("anniversary_date"),
+  spouseName: text("spouse_name"),
   photo: text("photo"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -163,7 +166,7 @@ export const insertFinanceTransactionSchema = createInsertSchema(financeTransact
 export const notificationTemplates = pgTable("notification_templates", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // birthday, event, devotional, etc.
+  type: text("type").notNull(), // birthday, anniversary, event, devotional, etc.
   content: text("content").notNull(),
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -181,7 +184,8 @@ export const sentNotifications = pgTable("sent_notifications", {
   targetId: integer("target_id"), // member_id, event_id, etc.
   targetType: text("target_type"), // member, event, etc.
   sentTo: text("sent_to").notNull(), // phone number
-  status: text("status").notNull(), // sent, failed
+  status: text("status").notNull(), // sent, failed, scheduled
+  scheduledFor: timestamp("scheduled_for"),
   sentAt: timestamp("sent_at").notNull().defaultNow(),
 });
 
