@@ -12,7 +12,7 @@ interface AnniversaryListProps {
 
 const AnniversaryList = ({ members }: AnniversaryListProps) => {
   const { data: anniversaryMembers, isLoading } = useQuery({
-    queryKey: ["/api/members/anniversaries"],
+    queryKey: ["/api/members/anniversary"],
     enabled: !members, // Only fetch if members aren't provided
     initialData: members,
   });

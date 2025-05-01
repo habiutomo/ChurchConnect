@@ -1,117 +1,56 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { format, differenceInYears } from 'date-fns';
-import { Calendar, Heart, Send } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { format, differenceInYears } from "date-fns";
+import { Calendar, Heart } from "lucide-react";
 import { Member } from "@shared/schema";
 
 interface AnniversaryCardProps {
   member: Member;
 }
 
-export function AnniversaryCard({ member }: AnniversaryCardProps) {
-  const { toast } = useToast();
-  const [isSending, setIsSending] = useState(false);
-
-  if (!member.anniversaryDate || !member.maritalStatus || member.maritalStatus !== "Married") {
-    return null;
-  }
-
-  const anniversaryDate = new Date(member.anniversaryDate);
-  const formattedDate = format(anniversaryDate, 'dd MMMM yyyy');
-  const years = differenceInYears(new Date(), anniversaryDate);
+export const AnniversaryCard = ({ member }: AnniversaryCardProps) => {
+  if (!member.anniversaryDate) return null;
   
-  const handleSendWishes = async () => {
-    try {
-      setIsSending(true);
-      
-      // Mencari template ulang tahun pernikahan
-      const templatesResponse = await fetch('/api/notification-templates/type/anniversary');
-      const templates = await templatesResponse.json();
-      
-      if (templates.length === 0) {
-        toast({
-          title: "Template tidak ditemukan",
-          description: "Template notifikasi untuk ulang tahun pernikahan tidak ditemukan.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      const template = templates[0];
-      
-      // Mengirim notifikasi
-      const response = await fetch('/api/send-notification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          templateId: template.id,
-          targetId: member.id,
-          targetType: 'member',
-          whatsappNumber: member.whatsapp,
-          message: template.content
-            .replace('{name}', member.name)
-            .replace('{years}', years.toString())
-            .replace('{spouse}', member.spouseName || 'pasangan')
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        toast({
-          title: "Ucapan terkirim",
-          description: `Ucapan ulang tahun pernikahan berhasil dikirim ke ${member.name}.`,
-        });
-      } else {
-        throw new Error(result.error || "Gagal mengirim ucapan");
-      }
-    } catch (error) {
-      console.error("Error sending anniversary wishes:", error);
-      toast({
-        title: "Gagal mengirim ucapan",
-        description: error instanceof Error ? error.message : "Terjadi kesalahan saat mengirim ucapan.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
+  const anniversaryDate = new Date(member.anniversaryDate);
+  const years = differenceInYears(new Date(), anniversaryDate);
+  const nextAnniversary = new Date(new Date().getFullYear(), anniversaryDate.getMonth(), anniversaryDate.getDate());
+  const isPassed = nextAnniversary < new Date();
+  
+  // If anniversary is passed, calculate next year's anniversary date
+  if (isPassed) {
+    nextAnniversary.setFullYear(nextAnniversary.getFullYear() + 1);
+  }
+  
+  const daysDiff = Math.ceil((nextAnniversary.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex justify-between items-center text-xl">
-          <span className="flex items-center gap-2">
-            <Heart className="text-rose-500" size={20} />
-            {member.name} & {member.spouseName}
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center text-muted-foreground">
-            <Calendar className="mr-2" size={16} />
-            <span>
-              {formattedDate} ({years} tahun)
+    <Card className="overflow-hidden border border-border bg-card hover:border-primary/50 transition-colors">
+      <CardContent className="p-0">
+        <div className="flex items-center p-4">
+          <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Heart className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-medium">{member.name}</h4>
+            <div className="text-sm text-muted-foreground">
+              <span className="flex items-center">
+                <Calendar className="mr-1 h-3 w-3" />
+                {format(anniversaryDate, "d MMMM yyyy")}
+              </span>
+            </div>
+          </div>
+          <div className="ml-2 flex flex-col items-end">
+            <Badge variant="outline" className="font-semibold">
+              {years} Tahun
+            </Badge>
+            <span className="mt-1 text-xs text-muted-foreground">
+              {daysDiff === 0 
+                ? "Hari ini!" 
+                : `${daysDiff} hari ${isPassed ? "lagi" : "yang lalu"}`}
             </span>
           </div>
-          <Button 
-            onClick={handleSendWishes}
-            disabled={isSending || !member.whatsapp}
-            size="sm"
-            className="mt-2 w-full"
-            variant="outline"
-          >
-            <Send className="mr-2" size={14} />
-            {isSending ? "Mengirim..." : "Kirim Ucapan"}
-          </Button>
         </div>
       </CardContent>
     </Card>
   );
-}
+};

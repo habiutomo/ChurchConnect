@@ -70,6 +70,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return aDate - bDate;
       });
       
+      // Get anniversary members for current month
+      const anniversaryMembers = await storage.getAnniversaryMembers(currentMonth);
+      
+      // Sort anniversary members by day
+      anniversaryMembers.sort((a, b) => {
+        const aDate = a.anniversaryDate ? new Date(a.anniversaryDate).getDate() : 0;
+        const bDate = b.anniversaryDate ? new Date(b.anniversaryDate).getDate() : 0;
+        return aDate - bDate;
+      });
+      
       // Get today's devotional
       const todayDevotional = await storage.getDevotionalByDate(today);
       
@@ -83,6 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         devotional: todayDevotional,
         events,
         birthdayMembers,
+        anniversaryMembers,
         finances: {
           income,
           expenses,
@@ -647,6 +658,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+
+  // Scheduled Notifications Routes
 
   // Member Anniversary Routes
   app.get("/api/members/anniversary", async (req, res) => {

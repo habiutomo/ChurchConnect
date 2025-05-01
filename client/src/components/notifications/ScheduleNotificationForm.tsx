@@ -1,233 +1,258 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { useToast } from "@/hooks/use-toast";
+import * as z from "zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { apiRequest } from '@/lib/queryClient';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
-  templateId: z.string().min(1, { message: "Template harus dipilih" }),
-  sentTo: z.string().min(1, { message: "Nomor WhatsApp harus diisi" }),
-  scheduledDate: z.date({ required_error: "Tanggal harus dipilih" }),
-  scheduledTime: z.string().min(1, { message: "Waktu harus diisi" }),
+  templateId: z.number({
+    required_error: "Template diperlukan",
+    invalid_type_error: "Template diperlukan",
+  }),
+  sentTo: z.string().min(1, "Nomor WhatsApp diperlukan"),
+  scheduledFor: z.date({
+    required_error: "Tanggal jadwal diperlukan",
+    invalid_type_error: "Tanggal jadwal diperlukan",
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 export function ScheduleNotificationForm() {
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const { data: templates, isLoading: templatesLoading } = useQuery({ 
+
+  const { data: templates, isLoading: isLoadingTemplates } = useQuery({
     queryKey: ["/api/notification-templates"],
   });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      templateId: "",
       sentTo: "",
-      scheduledTime: "08:00",
     },
   });
 
-  const scheduleNotification = async (values: FormValues) => {
-    const scheduledDateTime = new Date(values.scheduledDate);
-    const [hours, minutes] = values.scheduledTime.split(':').map(Number);
-    
-    scheduledDateTime.setHours(hours, minutes, 0, 0);
-    
-    try {
-      setIsSubmitting(true);
-      
-      const response = await fetch('/api/notifications/schedule', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          templateId: parseInt(values.templateId),
-          sentTo: values.sentTo,
-          scheduledFor: scheduledDateTime.toISOString(),
-        }),
+  const mutation = useMutation({
+    mutationFn: async (values: FormValues) => {
+      return apiRequest("/api/notifications/schedule", {
+        method: "POST",
+        body: JSON.stringify(values),
       });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || "Gagal menjadwalkan notifikasi");
-      }
-      
-      toast({
-        title: "Notifikasi terjadwal",
-        description: `Notifikasi telah dijadwalkan untuk dikirim pada ${format(scheduledDateTime, 'dd MMMM yyyy, HH:mm')}.`,
-      });
-      
-      // Reset form
-      form.reset();
-      
-      // Refresh data notifikasi terjadwal
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/scheduled"] });
-      
-    } catch (error) {
-      console.error("Error scheduling notification:", error);
       toast({
-        title: "Gagal menjadwalkan notifikasi",
-        description: error instanceof Error ? error.message : "Terjadi kesalahan saat menjadwalkan notifikasi.",
+        title: "Jadwal notifikasi berhasil dibuat",
+        description: "Notifikasi akan dikirim pada jadwal yang ditentukan",
+      });
+      form.reset();
+      setDate(undefined);
+    },
+    onError: (error) => {
+      toast({
+        title: "Gagal membuat jadwal notifikasi",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+  });
+
+  const onSubmit = (values: FormValues) => {
+    mutation.mutate(values);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Jadwalkan Notifikasi</CardTitle>
-        <CardDescription>
-          Jadwalkan pengiriman notifikasi ke anggota jemaat untuk waktu tertentu.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(scheduleNotification)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="templateId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Template Pesan</FormLabel>
-                  <Select
-                    disabled={templatesLoading || isSubmitting}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih template pesan" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {templates && Array.isArray(templates) ? templates.map((template: any) => (
-                        <SelectItem key={template.id} value={template.id.toString()}>
-                          {template.name}
-                        </SelectItem>
-                      )) : null}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="sentTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nomor WhatsApp</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="62812345678"
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="scheduledDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Tanggal</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                            disabled={isSubmitting}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd MMMM yyyy")
-                            ) : (
-                              <span>Pilih tanggal</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date(new Date().setHours(0, 0, 0, 0))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="scheduledTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Waktu</FormLabel>
-                    <div className="flex items-center">
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="time"
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <Clock className="ml-2 h-4 w-4 opacity-50" />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="templateId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Template Notifikasi</FormLabel>
+              <Select
+                onValueChange={(value) => field.onChange(parseInt(value))}
+                defaultValue={field.value?.toString()}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih template notifikasi" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {isLoadingTemplates ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
                     </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                  ) : templates && templates.length > 0 ? (
+                    templates.map((template: any) => (
+                      <SelectItem
+                        key={template.id}
+                        value={template.id.toString()}
+                      >
+                        {template.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="text-center p-4 text-muted-foreground">
+                      <p>Tidak ada template yang tersedia</p>
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Pilih template notifikasi yang akan dikirim
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Menjadwalkan..." : "Jadwalkan Notifikasi"}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+        <FormField
+          control={form.control}
+          name="sentTo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nomor WhatsApp</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Contoh: 628123456789"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Masukkan nomor WhatsApp penerima tanpa karakter khusus
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="scheduledFor"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Tanggal & Waktu Pengiriman</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP HH:mm", { locale: require('date-fns/locale/id') })
+                      ) : (
+                        <span>Pilih tanggal dan waktu</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(newDate) => {
+                      setDate(newDate);
+                      if (newDate) {
+                        // Set time to current time
+                        const now = new Date();
+                        newDate.setHours(now.getHours());
+                        newDate.setMinutes(now.getMinutes());
+                        field.onChange(newDate);
+                      }
+                    }}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
+                    initialFocus
+                  />
+                  <div className="p-3 border-t border-border">
+                    <div className="flex justify-between items-center">
+                      <FormLabel className="text-sm">Waktu</FormLabel>
+                      <Input
+                        type="time"
+                        className="w-24"
+                        onChange={(e) => {
+                          if (field.value) {
+                            const [hours, minutes] = e.target.value.split(':');
+                            const newDate = new Date(field.value);
+                            newDate.setHours(parseInt(hours));
+                            newDate.setMinutes(parseInt(minutes));
+                            field.onChange(newDate);
+                          } else if (date) {
+                            const [hours, minutes] = e.target.value.split(':');
+                            const newDate = new Date(date);
+                            newDate.setHours(parseInt(hours));
+                            newDate.setMinutes(parseInt(minutes));
+                            field.onChange(newDate);
+                          }
+                        }}
+                        value={
+                          field.value
+                            ? `${field.value.getHours().toString().padStart(2, '0')}:${field.value.getMinutes().toString().padStart(2, '0')}`
+                            : ""
+                        }
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <FormDescription>
+                Pilih tanggal dan waktu pengiriman notifikasi
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={mutation.isPending}
+        >
+          {mutation.isPending && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          Jadwalkan Notifikasi
+        </Button>
+      </form>
+    </Form>
   );
 }

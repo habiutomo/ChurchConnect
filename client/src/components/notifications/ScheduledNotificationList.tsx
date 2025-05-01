@@ -1,130 +1,135 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Calendar, Clock, Send, Trash } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Send, Bell } from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
 import { SentNotification } from "@shared/schema";
 
-export function ScheduledNotificationList() {
-  const { data: notifications, isLoading, error } = useQuery({ 
+interface ScheduledNotificationListProps {
+  onSendNow?: (notification: SentNotification) => void;
+  onDelete?: (notification: SentNotification) => void;
+}
+
+export function ScheduledNotificationList({
+  onSendNow,
+  onDelete,
+}: ScheduledNotificationListProps) {
+  const { data: notifications, isLoading } = useQuery({
     queryKey: ["/api/notifications/scheduled"],
-    refetchInterval: 60000, // Refresh every minute
   });
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
       </div>
     );
   }
 
-  if (error) {
+  if (!notifications || notifications.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Terjadi Kesalahan</CardTitle>
-          <CardDescription>
-            Tidak dapat memuat data notifikasi terjadwal.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
-  if (!notifications || !Array.isArray(notifications) || notifications.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Tidak Ada Notifikasi Terjadwal</CardTitle>
-          <CardDescription>
-            Belum ada notifikasi yang dijadwalkan untuk dikirim.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="text-center py-10 text-muted-foreground">
+        <p>Tidak ada notifikasi terjadwal</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {notifications.map((notification: SentNotification) => (
-        <ScheduledNotificationCard key={notification.id} notification={notification} />
-      ))}
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Template</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Penerima</TableHead>
+            <TableHead>Waktu Jadwal</TableHead>
+            <TableHead className="text-right">Tindakan</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {notifications.map((notification) => {
+            const scheduledDate = notification.scheduledFor
+              ? new Date(notification.scheduledFor)
+              : null;
+
+            return (
+              <TableRow key={notification.id}>
+                <TableCell className="font-medium">
+                  {notification.templateId}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      notification.status === "scheduled"
+                        ? "outline"
+                        : notification.status === "sent"
+                        ? "default"
+                        : "destructive"
+                    }
+                  >
+                    {notification.status === "scheduled"
+                      ? "Terjadwal"
+                      : notification.status === "sent"
+                      ? "Terkirim"
+                      : "Gagal"}
+                  </Badge>
+                </TableCell>
+                <TableCell>{notification.sentTo}</TableCell>
+                <TableCell>
+                  {scheduledDate ? (
+                    <div className="flex flex-col space-y-1">
+                      <span className="flex items-center text-xs text-muted-foreground">
+                        <Calendar className="mr-1 h-3 w-3" />
+                        {format(scheduledDate, "d MMMM yyyy")}
+                      </span>
+                      <span className="flex items-center text-xs text-muted-foreground">
+                        <Clock className="mr-1 h-3 w-3" />
+                        {format(scheduledDate, "HH:mm")}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(scheduledDate, { addSuffix: true })}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  {notification.status === "scheduled" && (
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onSendNow?.(notification)}
+                      >
+                        <Send className="h-4 w-4 mr-1" /> Kirim Sekarang
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDelete?.(notification)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
-  );
-}
-
-interface ScheduledNotificationCardProps {
-  notification: SentNotification;
-}
-
-function ScheduledNotificationCard({ notification }: ScheduledNotificationCardProps) {
-  const [isSending, setIsSending] = useState(false);
-  
-  const scheduledDate = notification.scheduledFor ? new Date(notification.scheduledFor) : null;
-  const formattedDate = scheduledDate ? format(scheduledDate, 'dd MMMM yyyy') : '-';
-  const formattedTime = scheduledDate ? format(scheduledDate, 'HH:mm') : '-';
-  
-  // Fungsi untuk mengirim notifikasi sekarang (tanpa menunggu jadwal)
-  const handleSendNow = async () => {
-    setIsSending(true);
-    
-    try {
-      // Logika untuk mengirim notifikasi sekarang akan diimplementasikan di masa mendatang
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulasi pengiriman
-      
-      // Handle hasil
-      setIsSending(false);
-      
-    } catch (error) {
-      console.error("Error sending notification:", error);
-      setIsSending(false);
-    }
-  };
-
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex justify-between items-center text-lg">
-          <span className="flex items-center gap-2">
-            <Bell className="text-primary" size={18} />
-            Notifikasi Terjadwal
-          </span>
-          <Badge variant={notification.status === "scheduled" ? "outline" : "secondary"}>
-            {notification.status === "scheduled" ? "Terjadwal" : notification.status}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center text-muted-foreground">
-            <Calendar className="mr-2" size={16} />
-            <span>{formattedDate}</span>
-            <Clock className="ml-4 mr-2" size={16} />
-            <span>{formattedTime}</span>
-          </div>
-          <div className="flex items-center text-muted-foreground">
-            <User className="mr-2" size={16} />
-            <span>Tujuan: {notification.sentTo}</span>
-          </div>
-          <div className="flex justify-end mt-2 gap-2">
-            <Button 
-              onClick={handleSendNow} 
-              disabled={isSending || notification.status !== "scheduled"}
-              size="sm"
-              variant="outline"
-            >
-              <Send className="mr-2" size={14} />
-              {isSending ? "Mengirim..." : "Kirim Sekarang"}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
